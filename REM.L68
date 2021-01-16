@@ -1,0 +1,120 @@
+00000400 Starting Address
+Assembler used: EASy68K Editor/Assembler v5.16.01
+Created On: 11/24/2018 3:58:17 PM
+
+00000000                             1  *------------------------------------------------------------------------------------
+00000000                             2  * Title      : Recursion Program
+00000000                             3  * Written by : Brian Klein
+00000000                             4  * Date       : 11/14/18
+00000000                             5  * Description: 
+00000000                             6  * Registers  : (A7)    --> Stack Pointer
+00000000                             7  *              D0      --> Product of multiplication
+00000000                             8  *              D1      --> Input1 = 1st number for multiplication, M
+00000000                             9  *              D2      --> Input2 = 2nd number for multiplication,
+00000000                            10  N
+00000000                            11  *------------------------------------------------------------------------------------
+00000200                            12             ORG          $200
+00000200= 00C8                      13  Input1     DC.W         200              1st number to multiply
+00000202= 0100                      14  Input2     DC.W         256              2nd number to multiply
+00000204                            15  PROD       DS.W         1               Input1*Input2 if no overflow, -1 otherwise
+00000206                            16  
+00000206                            17  *Main code goes here
+00000206                            18            
+00000400                            19             ORG          $400
+00000400                            20            
+00000400  4FF8 2000                 21             LEA          $2000,A7        Load $2000 to stack pointer
+00000404  3238 0200                 22             MOVE.W       Input1,D1       Input1 --> D1
+00000408  3438 0202                 23             MOVE.W       Input2,D2       Input2 --> D2
+0000040C  6100 001A                 24             BSR          EGP             Call EGP
+00000410  4FF8 2000                 25             LEA          $2000,A7        Load $2000 to stack pointer(clean up)
+00000414  31C0 0204                 26             MOVE.W       D0,PROD         D0 --> PROD
+00000418                            27             
+00000418                            28  *Display output
+00000418  3238 0204                 29             MOVE.W       PROD, D1        *Code to display the output
+0000041C  48C1                      30             EXT.L        D1              *
+0000041E  303C 0003                 31             MOVE         #3,D0           *
+00000422  4E4F                      32             TRAP         #15             *
+00000424                            33                                          *
+00000424  4E72 2700                 34             STOP         #$2700          *
+00000428                            35             
+00000428                            36  *------------------------------------------------------------------------------------
+00000428                            37  * Subroutine  : EGP
+00000428                            38  * Written by  : Brian Klein
+00000428                            39  * Date        : 11/14/18
+00000428                            40  * Description : 
+00000428                            41  * Registers   : D0      --> Product, M*N
+00000428                            42  *               D1      --> Input 1, M
+00000428                            43  *               D2      --> Input 2, N
+00000428                            44  *               (A7)    --> Stack Pointer
+00000428                            45  *               -4(A0)  --> Offset Frame Pointer to Local Temp N = N*2
+00000428                            46  *               -2(A0)  --> Offset Frame Pointer to Local Temp M = M/2
+00000428                            47  *               (A0)    --> Frame Pointer
+00000428                            48  *               4(A0)   --> Return Address
+00000428                            49  *               8(A0)   --> Offset Frame Pointer to Parameter N
+00000428                            50  *               10(A0)  --> Offset Frame Pointer to Parameter M
+00000428                            51  *------------------------------------------------------------------------------------
+00000428                            52  EGP
+00000428  =FFFFFFFC                 53  TN         EQU          -4              Offset by -4 for local 2
+00000428  =FFFFFFFE                 54  TM         EQU          -2              Offset by -2 for local 1
+00000428                            55  *N          EQU          8               Offset by 8 for N
+00000428                            56  *M          EQU          10              Offset by 10 for M
+00000428                            57  
+00000428  4E50 FFFC                 58             LINK         A0,#-4          Create stackframe
+0000042C                            59             
+0000042C                            60  *If M=0, then return 0
+0000042C  B27C 0000                 61             CMP.W        #0,D1           Check D1, if 0 then exit
+00000430  6700 0030                 62             BEQ          EXIT            Branch to exit if D1 = 0             
+00000434                            63             
+00000434                            64  *Is M even?
+00000434  0801 0000                 65             BTST         #0,D1           Bit-test: Is D1 even?
+00000438  6700 001A                 66             BEQ          EGP2            If D1 is even, branch to EGP2
+0000043C                            67             
+0000043C  D042                      68             ADD.W        D2,D0           D2 + D0 --> D0, Product + N
+0000043E  E241                      69             ASR          #1,D1           D1 / 2  --> D1, M = M/2
+00000440  E342                      70             ASL          #1,D2           D2 * 2  --> D2, N = N*2
+00000442  6900 0022                 71             BVS          OVRF            Branch to OVRF if D2*2 causes overflow
+00000446                            72             
+00000446  3141 FFFE                 73             MOVE.W       D1,TM(A0)       Move D1 --> -2(A0), TM = M
+0000044A  3142 FFFC                 74             MOVE.W       D2,TN(A0)       Move D2 --> -4(A0), TN = N
+0000044E                            75  
+0000044E  61D8                      76             BSR          EGP             Branch to subroutine EGP
+00000450  4E58                      77             UNLK         A0              Destroy stack frame
+00000452  4E75                      78             RTS                          Return to stack
+00000454                            79             
+00000454  E241                      80  EGP2       ASR          #1,D1           D1 / 2  --> D1, M = M/2
+00000456  E342                      81             ASL          #1,D2           D1 * 2  --> D2, N = N*2
+00000458                            82             
+00000458  3141 FFFE                 83             MOVE.W       D1,TM(A0)       Move D1 --> -2(A0), TM = M
+0000045C  3142 FFFC                 84             MOVE.W       D2,TN(A0)       Move D2 --> -4(A0), TN = N
+00000460  61C6                      85             BSR          EGP             Branch to begining of subroutine EGP
+00000462                            86             
+00000462  4E58                      87  EXIT       UNLK         A0              Destroy stack frame
+00000464  4E75                      88             RTS                          Return to stack
+00000466                            89             
+00000466                            90  *Handle overflow by assigning designated value to D0
+00000466  321F                      91  OVRF       MOVE         (A7)+,D1        Move stack pointer to D1 then increment
+00000468  303C FFFF                 92             MOVE.W       #-1,D0          Move value -1 to D0
+0000046C  4E58                      93             UNLK         A0              Destroy stack frame
+0000046E  4E75                      94             RTS                          Return to stack
+00000470                            95             
+00000470                            96  
+00000470                            97  
+00000470                            98             END         $400
+
+No errors detected
+No warnings generated
+
+
+SYMBOL TABLE INFORMATION
+Symbol-name         Value
+-------------------------
+EGP                 428
+EGP2                454
+EXIT                462
+INPUT1              200
+INPUT2              202
+N                   0
+OVRF                466
+PROD                204
+TM                  FFFFFFFE
+TN                  FFFFFFFC
